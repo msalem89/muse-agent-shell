@@ -8,6 +8,14 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - Sources
+    info:
+      path: Info.plist
+      properties:
+        UILaunchStoryboardName: LaunchScreen
+        NSLocationWhenInUseUsageDescription: "Your personal agent requires location access to provide context-aware recommendations."
+        NSContactsUsageDescription: "Your personal agent requires contacts access to help you message and email people."
+        NSCalendarsFullAccessUsageDescription: "Your personal agent requires calendar access to read your schedule and create events."
+        NSCalendarsUsageDescription: "Your personal agent requires calendar access to read your schedule and create events."
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

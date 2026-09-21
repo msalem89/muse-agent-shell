@@ -81,6 +81,11 @@ class BackendService {
     }
     
     func sendMessage(text: String, sshCommandTemplate: String = "python nafs/run_qarin.py") async throws -> String {
+        // Fetch real-time device context
+        let deviceContext = DeviceManager.shared.buildDeviceContextPayload()
+        let contextJsonData = try? JSONSerialization.data(withJSONObject: deviceContext)
+        let contextString = String(data: contextJsonData ?? Data(), encoding: .utf8) ?? "{}"
+        
         switch activeConnectionType {
         case .ssh:
             guard let sshClient = self.sshClient else {
@@ -88,8 +93,9 @@ class BackendService {
             }
             // Execute the command remotely. We format the command with the prompt.
             // Example: `python nafs/run_qarin.py "my message"`
-            let escapedText = text.replacingOccurrences(of: "\"", with: "\\\"")
-            let fullCommand = "\(sshCommandTemplate) \"\(escapedText)\""
+            let escapedPrompt = text.replacingOccurrences(of: "\"", with: "\\\"")
+            let escapedContext = contextString.replacingOccurrences(of: "\"", with: "\\\"")
+            let fullCommand = "\(sshCommandTemplate) \"\(escapedPrompt)\" --device-context \"\(escapedContext)\""
             
             // Note: Exact Citadel syntax for executing commands
             let responseBuffer = try await sshClient.executeCommand(fullCommand)
@@ -103,8 +109,10 @@ class BackendService {
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            let body = ["prompt": text]
-            request.httpBody = try? JSONEncoder().encode(body)
+            
+            // Bundle context in REST payload
+            let payload: [String: Any] = ["prompt": text, "deviceContext": deviceContext]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
             
             let (data, _) = try await URLSession.shared.data(for: request)
             if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {

@@ -1,54 +1,93 @@
 import SwiftUI
 
-@MainActor
-class PrivacySettingsViewModel: ObservableObject {
-    @Published var shareLocation: Bool = false {
-        didSet { saveSettings() }
-    }
-    @Published var shareContacts: Bool = false {
-        didSet { saveSettings() }
-    }
-    @Published var isSaving: Bool = false
-    
-    func saveSettings() {
-        isSaving = true
-        Task {
-            await BackendService.shared.updatePrivacySettings(shareLocation: shareLocation, shareContacts: shareContacts)
-            isSaving = false
-        }
-    }
-}
-
 struct PrivacySettingsView: View {
-    @StateObject private var viewModel = PrivacySettingsViewModel()
+    @StateObject private var deviceManager = DeviceManager.shared
     @EnvironmentObject var appState: AppState
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Device Data Sharing"), footer: Text("Your privacy is our priority. Toggle which device sensors and data your personal agent can access. All data is end-to-end encrypted.")) {
-                    Toggle(isOn: $viewModel.shareLocation) {
-                        Label("Location", systemImage: "location.fill")
+        let theme = appState.currentTheme
+        
+        Form {
+            Section(header: Text("Device Integration Context"), footer: Text("Granting these permissions allows \(theme.brandName) to fetch live data from your iPhone to provide better contextual answers. Data is only sent to your configured backend.")) {
+                
+                HStack {
+                    Image(systemName: "location.fill")
+                        .foregroundColor(.blue)
+                    VStack(alignment: .leading) {
+                        Text("Location Services")
+                        Text("Allows the agent to know where you are.")
+                            .font(.caption).foregroundColor(.gray)
                     }
-                    
-                    Toggle(isOn: $viewModel.shareContacts) {
-                        Label("Contacts", systemImage: "person.crop.circle.fill")
+                    Spacer()
+                    if deviceManager.isLocationAuthorized {
+                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                    } else {
+                        Button("Allow") {
+                            deviceManager.requestLocationAccess()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
                 
-                Section {
-                    Button(role: .destructive, action: {
-                        appState.isConnected = false
-                    }) {
-                        HStack {
-                            Spacer()
-                            Text("Disconnect Agent")
-                            Spacer()
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.red)
+                    VStack(alignment: .leading) {
+                        Text("Calendar Events")
+                        Text("Allows the agent to read and schedule events.")
+                            .font(.caption).foregroundColor(.gray)
+                    }
+                    Spacer()
+                    if deviceManager.isCalendarAuthorized {
+                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                    } else {
+                        Button("Allow") {
+                            deviceManager.requestCalendarAccess { _ in }
                         }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                
+                HStack {
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(.orange)
+                    VStack(alignment: .leading) {
+                        Text("Contacts")
+                        Text("Allows the agent to look up emails and numbers.")
+                            .font(.caption).foregroundColor(.gray)
+                    }
+                    Spacer()
+                    if deviceManager.isContactsAuthorized {
+                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                    } else {
+                        Button("Allow") {
+                            deviceManager.requestContactsAccess { _ in }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }
-            .navigationTitle("Privacy")
+            .listRowBackground(theme.useGlassmorphism ? Color.clear : Color(UIColor.secondarySystemGroupedBackground))
+            .background(theme.useGlassmorphism ? .ultraThinMaterial : .regularMaterial)
+            .cornerRadius(10)
         }
+        .scrollContentBackground(.hidden)
+        .background(
+            Group {
+                if theme.isTerminalStyle {
+                    Color.black.ignoresSafeArea()
+                } else if theme.useGlassmorphism {
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color(hex: theme.primaryHex).opacity(0.1), Color(hex: theme.secondaryHex).opacity(0.1)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ).ignoresSafeArea()
+                } else {
+                    Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                }
+            }
+        )
+        .navigationTitle("Agent Context")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
