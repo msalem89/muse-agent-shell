@@ -1,22 +1,52 @@
 import Foundation
 
+import Citadel
+import NIOSSH
+import NIO
+
 class BackendService {
     static let shared = BackendService()
     
     private init() {}
     
     var activeConnectionType: ConnectionProtocol = .ssh
+    var sshClient: SSHClient?
     
     func connectSSH(host: String, port: String, user: String, pass: String, command: String) async throws {
-        // In a real app, you would initialize an NMSSH session or SwiftSH here.
         self.activeConnectionType = .ssh
-        try await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        let portInt = Int(port) ?? 22
+        
+        // Initialize Citadel SSH Client
+        let client = try await SSHClient.connect(
+            host: host,
+            port: portInt,
+            authenticationMethod: .password(pass),
+            hostKeyValidator: .acceptAnything(),
+            reconnect: .never
+        )
+        self.sshClient = client
     }
     
     func connectHTTPS(url: String, apiKey: String) async throws {
-        // Standard URLSession setup
+        guard let endpoint = URL(string: url) else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        if !apiKey.isEmpty {
+            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Simple ping to verify connection
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        
         self.activeConnectionType = .https
-        try await Task.sleep(nanoseconds: 1_000_000_000)
     }
     
     func fetchChatHistory() async -> [ChatMessage] {
