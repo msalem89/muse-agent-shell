@@ -34,26 +34,33 @@ class ChatViewModel: ObservableObject {
 
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
+    @EnvironmentObject var appState: AppState
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
+        let theme = appState.currentTheme
         NavigationView {
             ZStack {
-                // Dynamic Pastel Gradient Background
-                LinearGradient(
-                    gradient: Gradient(colors: colorScheme == .dark 
-                                       ? [Color(red: 0.1, green: 0.1, blue: 0.3), Color(red: 0.05, green: 0.15, blue: 0.2)] 
-                                       : [Color(red: 0.95, green: 0.9, blue: 1.0), Color(red: 0.85, green: 0.95, blue: 1.0)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Dynamic AI Background
+                if theme.isTerminalStyle {
+                    Color.black.ignoresSafeArea()
+                } else if theme.useGlassmorphism {
+                    LinearGradient(
+                        gradient: Gradient(colors: colorScheme == .dark 
+                                           ? [Color(hex: theme.secondaryHex).opacity(0.8), Color.black] 
+                                           : [Color(hex: theme.primaryHex).opacity(0.1), Color(hex: theme.secondaryHex).opacity(0.1)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ).ignoresSafeArea()
+                } else {
+                    Color(UIColor.systemBackground).ignoresSafeArea()
+                }
                 
                 VStack {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.messages) { message in
-                                MessageBubble(message: message)
+                                MessageBubble(message: message, theme: theme)
                             }
                         }
                         .padding()
@@ -61,10 +68,11 @@ struct ChatView: View {
                     
                     // Chat Input Area
                     HStack {
-                        TextField("Message Agent...", text: $viewModel.inputText)
+                        TextField("Message \(theme.brandName)...", text: $viewModel.inputText)
                             .padding(12)
-                            .background(.ultraThinMaterial)
+                            .background(theme.useGlassmorphism ? AnyView(Rectangle().fill(.ultraThinMaterial)) : AnyView(Color(UIColor.secondarySystemBackground)))
                             .cornerRadius(20)
+                            .foregroundColor(theme.isTerminalStyle ? Color(hex: theme.primaryHex) : .primary)
                         
                         Button(action: {
                             viewModel.sendMessage()
@@ -72,16 +80,16 @@ struct ChatView: View {
                             Image(systemName: "arrow.up.circle.fill")
                                 .resizable()
                                 .frame(width: 32, height: 32)
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color(hex: theme.primaryHex))
                         }
                     }
                     .padding()
-                    .background(.ultraThinMaterial)
+                    .background(theme.useGlassmorphism ? AnyView(Rectangle().fill(.ultraThinMaterial)) : AnyView(Color(UIColor.systemBackground)))
                 }
             }
-            .navigationTitle("Agent Chat")
+            .navigationTitle(theme.brandName)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(theme.useGlassmorphism ? .ultraThinMaterial : .visible, for: .navigationBar)
             .onAppear {
                 viewModel.loadMessages()
             }
@@ -91,6 +99,7 @@ struct ChatView: View {
 
 struct MessageBubble: View {
     let message: ChatMessage
+    let theme: ThemeConfig
     
     var body: some View {
         HStack {
@@ -100,15 +109,19 @@ struct MessageBubble: View {
                 if let text = message.text {
                     Text(text)
                         .padding(14)
-                        .background(message.isUser ? AnyView(Color.blue.opacity(0.8)) : AnyView(Rectangle().fill(.ultraThinMaterial)))
-                        .foregroundColor(message.isUser ? .white : .primary)
+                        .background(
+                            message.isUser 
+                            ? AnyView(Color(hex: theme.primaryHex).opacity(0.8)) 
+                            : (theme.useGlassmorphism ? AnyView(Rectangle().fill(.ultraThinMaterial)) : AnyView(Color(UIColor.secondarySystemBackground)))
+                        )
+                        .foregroundColor(message.isUser ? .white : (theme.isTerminalStyle ? Color(hex: theme.primaryHex) : .primary))
                         .cornerRadius(18)
-                        // Add slight shadow for depth
                         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                        .font(theme.isTerminalStyle ? .system(.body, design: .monospaced) : .body)
                 }
                 
                 if let task = message.associatedTask {
-                    TaskCard(task: task)
+                    TaskCard(task: task, theme: theme)
                 }
             }
             
@@ -119,6 +132,7 @@ struct MessageBubble: View {
 
 struct TaskCard: View {
     let task: AgentTask
+    let theme: ThemeConfig
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -127,11 +141,12 @@ struct TaskCard: View {
                     .foregroundColor(color(for: task.status))
                     .font(.title3)
                 Text(task.title)
-                    .font(.headline)
+                    .font(theme.isTerminalStyle ? .system(.headline, design: .monospaced) : .headline)
+                    .foregroundColor(theme.isTerminalStyle ? Color(hex: theme.primaryHex) : .primary)
             }
             Text(task.description)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(theme.isTerminalStyle ? .system(.subheadline, design: .monospaced) : .subheadline)
+                .foregroundColor(theme.isTerminalStyle ? Color(hex: theme.secondaryHex) : .secondary)
             
             HStack {
                 Text(task.status.rawValue)
@@ -148,13 +163,12 @@ struct TaskCard: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial)
+        .background(theme.useGlassmorphism ? AnyView(Rectangle().fill(.ultraThinMaterial)) : AnyView(Color(UIColor.secondarySystemBackground)))
         .cornerRadius(20)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        // Add a subtle border to enhance the glass effect
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                .stroke(theme.useGlassmorphism ? Color.white.opacity(0.2) : Color.clear, lineWidth: 1)
         )
     }
     
@@ -168,7 +182,7 @@ struct TaskCard: View {
     
     private func color(for status: TaskStatus) -> Color {
         switch status {
-        case .running: return .blue
+        case .running: return Color(hex: theme.primaryHex)
         case .needsApproval: return .orange
         case .completed: return .green
         }

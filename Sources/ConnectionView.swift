@@ -26,24 +26,31 @@ class ConnectionViewModel: ObservableObject {
     
     @Published var isConnecting: Bool = false
     
-    func connect(completion: @escaping () -> Void) {
+    func connect(appState: AppState, completion: @escaping () -> Void) {
         isConnecting = true
         Task {
             do {
+                let fetchedTheme: ThemeConfig
                 switch connectionProtocol {
                 case .ssh:
-                    try await BackendService.shared.connectSSH(host: sshHost, port: sshPort, user: sshUsername, pass: sshPassword, keyPath: sshKeyPath, command: sshCommand)
+                    fetchedTheme = try await BackendService.shared.connectSSH(host: sshHost, port: sshPort, user: sshUsername, pass: sshPassword, keyPath: sshKeyPath, command: sshCommand)
                 case .https:
-                    try await BackendService.shared.connectHTTPS(url: backendURL, apiKey: apiKey)
+                    fetchedTheme = try await BackendService.shared.connectHTTPS(url: backendURL, apiKey: apiKey)
                 case .websocket:
-                    try await BackendService.shared.connectWebSocket(url: backendURL, apiKey: apiKey)
+                    fetchedTheme = try await BackendService.shared.connectWebSocket(url: backendURL, apiKey: apiKey)
                 case .hosted:
-                    try await BackendService.shared.connectHosted(apiKey: apiKey)
+                    fetchedTheme = try await BackendService.shared.connectHosted(apiKey: apiKey)
                 }
-                isConnecting = false
-                completion()
+                
+                DispatchQueue.main.async {
+                    appState.currentTheme = fetchedTheme
+                    self.isConnecting = false
+                    completion()
+                }
             } catch {
-                isConnecting = false
+                DispatchQueue.main.async {
+                    self.isConnecting = false
+                }
             }
         }
     }
@@ -126,7 +133,7 @@ struct ConnectionView: View {
                     }
                     
                     Button(action: {
-                        viewModel.connect { appState.isConnected = true }
+                        viewModel.connect(appState: appState) { appState.isConnected = true }
                     }) {
                         HStack {
                             Spacer()

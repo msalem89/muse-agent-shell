@@ -2,6 +2,7 @@ import SwiftUI
 
 class AppState: ObservableObject {
     @Published var isConnected: Bool = false
+    @Published var currentTheme: ThemeConfig = .defaultTheme
 }
 
 @main

@@ -12,13 +12,21 @@ class BackendService {
     var activeConnectionType: ConnectionProtocol = .ssh
     var sshClient: SSHClient?
     
-    func connectSSH(host: String, port: String, user: String, pass: String, keyPath: String, command: String) async throws {
+    // Simulating a dynamic theme payload sent by the backend node (e.g. Qarin)
+    private let mockBackendTheme = ThemeConfig(
+        brandName: "Qarin OS",
+        primaryHex: "#2ECC71", // Matrix/Terminal Green
+        secondaryHex: "#1F2937", // Dark Gray
+        useGlassmorphism: false,
+        isTerminalStyle: true
+    )
+    
+    func connectSSH(host: String, port: String, user: String, pass: String, keyPath: String, command: String) async throws -> ThemeConfig {
         self.activeConnectionType = .ssh
         let portInt = Int(port) ?? 22
         
         let authMethod: NIOSSH.SSHAuthenticationMethod
         if !keyPath.isEmpty {
-            // Simplified fallback for loading keys in a real app
             authMethod = .password("Requires Key Loading Implementation") 
         } else {
             authMethod = .password(pass)
@@ -32,19 +40,20 @@ class BackendService {
             reconnect: .never
         )
         self.sshClient = client
+        return mockBackendTheme // In real app, run a command to fetch JSON config
     }
     
-    func connectWebSocket(url: String, apiKey: String) async throws {
+    func connectWebSocket(url: String, apiKey: String) async throws -> ThemeConfig {
         guard let endpoint = URL(string: url) else { throw URLError(.badURL) }
         var request = URLRequest(url: endpoint)
         if !apiKey.isEmpty {
             request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
-        // In a full implementation, we'd retain URLSessionWebSocketTask here
         self.activeConnectionType = .websocket
+        return ThemeConfig.defaultTheme
     }
     
-    func connectHTTPS(url: String, apiKey: String) async throws {
+    func connectHTTPS(url: String, apiKey: String) async throws -> ThemeConfig {
         guard let endpoint = URL(string: url) else {
             throw URLError(.badURL)
         }
@@ -55,7 +64,6 @@ class BackendService {
             request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
         
-        // Simple ping to verify connection
         let (_, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -63,12 +71,13 @@ class BackendService {
         }
         
         self.activeConnectionType = .https
+        return ThemeConfig.defaultTheme
     }
     
-    func connectHosted(apiKey: String) async throws {
-        // Points to our official cloud hosted agent (future)
+    func connectHosted(apiKey: String) async throws -> ThemeConfig {
         self.activeConnectionType = .hosted
         try await Task.sleep(nanoseconds: 1_000_000_000)
+        return ThemeConfig.defaultTheme
     }
     
     func sendMessage(text: String, sshCommandTemplate: String = "python nafs/run_qarin.py") async throws -> String {
