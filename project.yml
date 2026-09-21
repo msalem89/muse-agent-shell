@@ -1,0 +1,18 @@
+name: MuseClone
+options:
+  bundleIdPrefix: com.example
+targets:
+  MuseClone:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Sources
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: NO
+        PRODUCT_NAME: MuseClone
+        SWIFT_VERSION: 5.0
+        DEVELOPMENT_TEAM: ""
