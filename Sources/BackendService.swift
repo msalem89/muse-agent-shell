@@ -49,6 +49,12 @@ class BackendService {
         self.activeConnectionType = .https
     }
     
+    func connectHosted(apiKey: String) async throws {
+        // Points to our official cloud hosted agent (future)
+        self.activeConnectionType = .hosted
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+    }
+    
     func fetchChatHistory() async -> [ChatMessage] {
         return [
             ChatMessage(isUser: true, text: "Book a flight to New York.", associatedTask: nil),

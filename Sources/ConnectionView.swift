@@ -1,8 +1,9 @@
 import SwiftUI
 
 enum ConnectionProtocol: String, CaseIterable, Identifiable {
-    case https = "HTTPS / API"
-    case ssh = "SSH / CLI"
+    case hosted = "Hosted Agent (Cloud)"
+    case https = "HTTPS / API (Local)"
+    case ssh = "SSH / CLI (Local)"
     var id: Self { self }
 }
 
@@ -29,8 +30,10 @@ class ConnectionViewModel: ObservableObject {
             do {
                 if connectionProtocol == .ssh {
                     try await BackendService.shared.connectSSH(host: sshHost, port: sshPort, user: sshUsername, pass: sshPassword, command: sshCommand)
-                } else {
+                } else if connectionProtocol == .https {
                     try await BackendService.shared.connectHTTPS(url: backendURL, apiKey: apiKey)
+                } else {
+                    try await BackendService.shared.connectHosted(apiKey: apiKey)
                 }
                 isConnecting = false
                 completion()
@@ -57,7 +60,14 @@ struct ConnectionView: View {
                     .pickerStyle(SegmentedPickerStyle())
                 }
                 
-                if viewModel.connectionProtocol == .https {
+                if viewModel.connectionProtocol == .hosted {
+                    Section(header: Text("Hosted Configuration")) {
+                        Text("Connect to our secure, managed cloud agent. No setup required.")
+                            .font(.footnote)
+                            .foregroundColor(.gray)
+                        SecureField("API Key or License Code (Optional)", text: $viewModel.apiKey)
+                    }
+                } else if viewModel.connectionProtocol == .https {
                     Section(header: Text("HTTPS Configuration")) {
                         TextField("Backend URL (e.g. http://192.168.1.5:8000)", text: $viewModel.backendURL)
                             .keyboardType(.URL)
