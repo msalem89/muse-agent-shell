@@ -1,28 +1,25 @@
 import SwiftUI
 
-enum ConnectionProtocol: String, CaseIterable, Identifiable {
-    case hosted = "Hosted (Cloud)"
-    case https = "HTTPS (REST)"
-    case websocket = "WebSocket (WSS)"
-    case ssh = "SSH (CLI)"
     var id: Self { self }
 }
 
 @MainActor
 class ConnectionViewModel: ObservableObject {
-    @Published var connectionProtocol: ConnectionProtocol = .ssh
+    @Published var connectionProtocol: ConnectionProtocol = .gemini
     
-    // Web/API Fields (HTTPS & WebSocket)
-    @Published var backendURL: String = ""
-    @Published var apiKey: String = ""
+    // SSH Config
+    @Published var sshHost = ""
+    @Published var sshPort = "22"
+    @Published var sshUsername = ""
+    @Published var sshPassword = ""
+    @Published var sshKeyPath = ""
+    @Published var sshCommand = "python nafs/run_qarin.py"
     
-    // SSH Fields
-    @Published var sshHost: String = ""
-    @Published var sshPort: String = "22"
-    @Published var sshUsername: String = ""
-    @Published var sshPassword: String = ""
-    @Published var sshKeyPath: String = "" // For robust private key auth
-    @Published var sshCommand: String = "python nafs/run_qarin.py"
+    // HTTPS/WSS Config
+    @Published var backendURL = ""
+    
+    // Global API Key (Used for Hosted, HTTPS, or Cloud LLMs)
+    @Published var apiKey = ""
     
     @Published var isConnecting: Bool = false
     
@@ -40,6 +37,12 @@ class ConnectionViewModel: ObservableObject {
                     fetchedTheme = try await BackendService.shared.connectWebSocket(url: backendURL, apiKey: apiKey)
                 case .hosted:
                     fetchedTheme = try await BackendService.shared.connectHosted(apiKey: apiKey)
+                case .gemini:
+                    fetchedTheme = try await BackendService.shared.connectCloudLLM(provider: .gemini, apiKey: apiKey)
+                case .openAI:
+                    fetchedTheme = try await BackendService.shared.connectCloudLLM(provider: .openAI, apiKey: apiKey)
+                case .claude:
+                    fetchedTheme = try await BackendService.shared.connectCloudLLM(provider: .claude, apiKey: apiKey)
                 }
                 
                 DispatchQueue.main.async {
@@ -77,21 +80,32 @@ struct ConnectionView: View {
                 Form {
                     Section(header: Text("Connection Protocol")) {
                         Picker("Method", selection: $viewModel.connectionProtocol) {
-                            ForEach(ConnectionProtocol.allCases) { protocolType in
-                                Text(protocolType.rawValue).tag(protocolType)
-                            }
+                            Text("Gemini").tag(ConnectionProtocol.gemini)
+                            Text("OpenAI").tag(ConnectionProtocol.openAI)
+                            Text("Claude").tag(ConnectionProtocol.claude)
+                            Text("SSH").tag(ConnectionProtocol.ssh)
+                            Text("HTTPS").tag(ConnectionProtocol.https)
+                            Text("WSS").tag(ConnectionProtocol.websocket)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
                     }
                     .listRowBackground(Color.clear)
                     .background(.ultraThinMaterial)
                     .cornerRadius(10)
                     
-                    if viewModel.connectionProtocol == .hosted {
-                        Section(header: Text("Hosted Configuration")) {
-                            Text("Connect to our secure, managed cloud agent. No setup required.")
+                    if viewModel.connectionProtocol == .gemini || viewModel.connectionProtocol == .openAI || viewModel.connectionProtocol == .claude {
+                        Section(header: Text("\(viewModel.connectionProtocol.rawValue) Configuration")) {
+                            Text("Connect directly to the cloud API.")
                                 .font(.footnote).foregroundColor(.gray)
-                            SecureField("API Key or License Code (Optional)", text: $viewModel.apiKey)
+                            SecureField("API Key", text: $viewModel.apiKey)
+                        }
+                        .listRowBackground(Color.clear)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(10)
+                    } else if viewModel.connectionProtocol == .hosted {
+                        Section(header: Text("Hosted Configuration")) {
+                            Text("Connect to our secure, managed cloud agent.")
+                                .font(.footnote).foregroundColor(.gray)
+                            SecureField("License Code", text: $viewModel.apiKey)
                         }
                         .listRowBackground(Color.clear)
                         .background(.ultraThinMaterial)
@@ -138,7 +152,7 @@ struct ConnectionView: View {
                         HStack {
                             Spacer()
                             if viewModel.isConnecting { ProgressView().progressViewStyle(CircularProgressViewStyle()) }
-                            else { Text("Connect to Agent System").fontWeight(.semibold) }
+                            else { Text("Connect to Agent").fontWeight(.semibold) }
                             Spacer()
                         }
                     }

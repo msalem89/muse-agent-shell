@@ -5,6 +5,18 @@ enum TaskStatus: String, CaseIterable {
     case completed = "Completed"
 }
 
+enum ConnectionProtocol: String, CaseIterable, Identifiable {
+    case ssh = "SSH"
+    case https = "HTTPS"
+    case websocket = "WebSocket"
+    case hosted = "Hosted"
+    case gemini = "Gemini"
+    case openAI = "OpenAI"
+    case claude = "Claude"
+    
+    var id: String { self.rawValue }
+}
+
 // MARK: - Dynamic AI Theme Configuration
 struct ThemeConfig: Codable {
     var brandName: String
@@ -17,6 +29,30 @@ struct ThemeConfig: Codable {
         brandName: "Personal AI",
         primaryHex: "#007AFF", // Standard iOS Blue
         secondaryHex: "#5856D6",
+        useGlassmorphism: true,
+        isTerminalStyle: false
+    )
+    
+    static let geminiTheme = ThemeConfig(
+        brandName: "Gemini",
+        primaryHex: "#1A73E8",
+        secondaryHex: "#A4C639",
+        useGlassmorphism: true,
+        isTerminalStyle: false
+    )
+    
+    static let openAITheme = ThemeConfig(
+        brandName: "OpenAI",
+        primaryHex: "#10A37F",
+        secondaryHex: "#000000",
+        useGlassmorphism: true,
+        isTerminalStyle: false
+    )
+    
+    static let claudeTheme = ThemeConfig(
+        brandName: "Claude",
+        primaryHex: "#D97757",
+        secondaryHex: "#333333",
         useGlassmorphism: true,
         isTerminalStyle: false
     )

@@ -80,6 +80,20 @@ class BackendService {
         return ThemeConfig.defaultTheme
     }
     
+    private var llmApiKey: String?
+    
+    func connectCloudLLM(provider: ConnectionProtocol, apiKey: String) async throws -> ThemeConfig {
+        self.activeConnectionType = provider
+        self.llmApiKey = apiKey
+        
+        switch provider {
+        case .gemini: return ThemeConfig.geminiTheme
+        case .openAI: return ThemeConfig.openAITheme
+        case .claude: return ThemeConfig.claudeTheme
+        default: return ThemeConfig.defaultTheme
+        }
+    }
+    
     func sendMessage(text: String, sshCommandTemplate: String = "python nafs/run_qarin.py") async throws -> String {
         // Fetch real-time device context
         let deviceContext = DeviceManager.shared.buildDeviceContextPayload()
@@ -91,37 +105,62 @@ class BackendService {
             guard let sshClient = self.sshClient else {
                 throw URLError(.notConnectedToInternet)
             }
-            // Execute the command remotely. We format the command with the prompt.
-            // Example: `python nafs/run_qarin.py "my message"`
             let escapedPrompt = text.replacingOccurrences(of: "\"", with: "\\\"")
             let escapedContext = contextString.replacingOccurrences(of: "\"", with: "\\\"")
             let fullCommand = "\(sshCommandTemplate) \"\(escapedPrompt)\" --device-context \"\(escapedContext)\""
             
-            // Note: Exact Citadel syntax for executing commands
             let responseBuffer = try await sshClient.executeCommand(fullCommand)
             var buffer = responseBuffer
             let responseString = buffer.readString(length: buffer.readableBytes) ?? ""
             return responseString.trimmingCharacters(in: .whitespacesAndNewlines)
             
+        case .gemini:
+            guard let key = llmApiKey else { throw URLError(.userAuthenticationRequired) }
+            let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=\(key)")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            let payload: [String: Any] = [
+                "contents": [
+                    ["parts": [["text": text + "\n[System Context: \(contextString)]"]]]
+                ]
+            ]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            let (data, _) = try await URLSession.shared.data(for: request)
+            return String(data: data, encoding: .utf8) ?? "Success"
+            
+        case .openAI:
+            guard let key = llmApiKey else { throw URLError(.userAuthenticationRequired) }
+            let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.addValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            let payload: [String: Any] = [
+                "model": "gpt-4-turbo",
+                "messages": [
+                    ["role": "system", "content": "Context: \(contextString)"],
+                    ["role": "user", "content": text]
+                ]
+            ]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            let (data, _) = try await URLSession.shared.data(for: request)
+            return String(data: data, encoding: .utf8) ?? "Success"
+            
+        case .claude:
+            return "Claude API integration ready to implement."
+            
         case .https:
-            // HTTPS POST request to local Agent Orchestrator
             guard let endpoint = URL(string: "http://localhost:8000/chat") else { throw URLError(.badURL) }
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            // Bundle context in REST payload
             let payload: [String: Any] = ["prompt": text, "deviceContext": deviceContext]
             request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-            
             let (data, _) = try await URLSession.shared.data(for: request)
-            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-                return decoded["response"] ?? "Success"
-            }
             return String(data: data, encoding: .utf8) ?? "Success"
             
         case .websocket:
-            // Placeholder for WebSocket messaging
             return "WebSocket implementation pending real-time event streaming."
             
         case .hosted:
