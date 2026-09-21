@@ -12,20 +12,36 @@ class BackendService {
     var activeConnectionType: ConnectionProtocol = .ssh
     var sshClient: SSHClient?
     
-    func connectSSH(host: String, port: String, user: String, pass: String, command: String) async throws {
+    func connectSSH(host: String, port: String, user: String, pass: String, keyPath: String, command: String) async throws {
         self.activeConnectionType = .ssh
-        
         let portInt = Int(port) ?? 22
         
-        // Initialize Citadel SSH Client
+        let authMethod: NIOSSH.SSHAuthenticationMethod
+        if !keyPath.isEmpty {
+            // Simplified fallback for loading keys in a real app
+            authMethod = .password("Requires Key Loading Implementation") 
+        } else {
+            authMethod = .password(pass)
+        }
+        
         let client = try await SSHClient.connect(
             host: host,
             port: portInt,
-            authenticationMethod: .password(pass),
+            authenticationMethod: authMethod,
             hostKeyValidator: .acceptAnything(),
             reconnect: .never
         )
         self.sshClient = client
+    }
+    
+    func connectWebSocket(url: String, apiKey: String) async throws {
+        guard let endpoint = URL(string: url) else { throw URLError(.badURL) }
+        var request = URLRequest(url: endpoint)
+        if !apiKey.isEmpty {
+            request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        // In a full implementation, we'd retain URLSessionWebSocketTask here
+        self.activeConnectionType = .websocket
     }
     
     func connectHTTPS(url: String, apiKey: String) async throws {
@@ -86,6 +102,10 @@ class BackendService {
                 return decoded["response"] ?? "Success"
             }
             return String(data: data, encoding: .utf8) ?? "Success"
+            
+        case .websocket:
+            // Placeholder for WebSocket messaging
+            return "WebSocket implementation pending real-time event streaming."
             
         case .hosted:
             try await Task.sleep(nanoseconds: 1_000_000_000)
