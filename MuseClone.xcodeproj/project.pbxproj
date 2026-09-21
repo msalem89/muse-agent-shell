@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		101B9EE58468B3D609FD18BF /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2590AF1AFC04E426F79EF08C /* Models.swift */; };
+		2FCE1DAF4A49FB5980954C84 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = D0C317B444A912EC90134E4B /* Citadel */; };
 		56435D6444C1D21B31788010 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8729DF0D521A97BD64FA3467 /* MainTabView.swift */; };
 		5938D9A2BB19D13D6F4C9D50 /* TaskDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C71021A25D83169D2F244F21 /* TaskDashboardView.swift */; };
 		5F4CA783CB4D0F3C7A4C8AA9 /* MuseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D168C0E9A56D9EDEEB8B5B60 /* MuseApp.swift */; };
@@ -28,6 +29,17 @@
 		D168C0E9A56D9EDEEB8B5B60 /* MuseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseApp.swift; sourceTree = "<group>"; };
 		F23615A4D1A695612978FCCA /* BackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0437678151843D9AB4C92A26 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2FCE1DAF4A49FB5980954C84 /* Citadel in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		688AEA149B595B62448AF0F5 /* Products */ = {
@@ -69,6 +81,7 @@
 			buildConfigurationList = B2ADA45558506E9743C99BEA /* Build configuration list for PBXNativeTarget "MuseClone" */;
 			buildPhases = (
 				8BFE355D47B0176A371CC237 /* Sources */,
+				0437678151843D9AB4C92A26 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -76,6 +89,7 @@
 			);
 			name = MuseClone;
 			packageProductDependencies = (
+				D0C317B444A912EC90134E4B /* Citadel */,
 			);
 			productName = MuseClone;
 			productReference = 8FE8764EE9FB66E9D492387F /* MuseClone.app */;
@@ -104,6 +118,9 @@
 			);
 			mainGroup = 8E8CD9846AC41303708B8023;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D27468BF1FA7A5A575E2FE3F /* XCRemoteSwiftPackageReference "Citadel" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 688AEA149B595B62448AF0F5 /* Products */;
 			projectDirPath = "";
@@ -316,6 +333,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D27468BF1FA7A5A575E2FE3F /* XCRemoteSwiftPackageReference "Citadel" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/orlandos-nl/Citadel.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D0C317B444A912EC90134E4B /* Citadel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D27468BF1FA7A5A575E2FE3F /* XCRemoteSwiftPackageReference "Citadel" */;
+			productName = Citadel;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 87E214366D7E6C93E3ACD8FF /* Project object */;
 }

@@ -16,3 +16,9 @@ targets:
         PRODUCT_NAME: MuseClone
         SWIFT_VERSION: 5.0
         DEVELOPMENT_TEAM: ""
+    dependencies:
+      - package: Citadel
+packages:
+  Citadel:
+    url: https://github.com/orlandos-nl/Citadel.git
+    from: 0.7.0
