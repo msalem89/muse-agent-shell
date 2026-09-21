@@ -34,33 +34,54 @@ class ChatViewModel: ObservableObject {
 
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         NavigationView {
-            VStack {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(viewModel.messages) { message in
-                            MessageBubble(message: message)
+            ZStack {
+                // Dynamic Pastel Gradient Background
+                LinearGradient(
+                    gradient: Gradient(colors: colorScheme == .dark 
+                                       ? [Color(red: 0.1, green: 0.1, blue: 0.3), Color(red: 0.05, green: 0.15, blue: 0.2)] 
+                                       : [Color(red: 0.95, green: 0.9, blue: 1.0), Color(red: 0.85, green: 0.95, blue: 1.0)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                VStack {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.messages) { message in
+                                MessageBubble(message: message)
+                            }
+                        }
+                        .padding()
+                    }
+                    
+                    // Chat Input Area
+                    HStack {
+                        TextField("Message Agent...", text: $viewModel.inputText)
+                            .padding(12)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(20)
+                        
+                        Button(action: {
+                            viewModel.sendMessage()
+                        }) {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .resizable()
+                                .frame(width: 32, height: 32)
+                                .foregroundColor(.blue)
                         }
                     }
                     .padding()
+                    .background(.ultraThinMaterial)
                 }
-                
-                HStack {
-                    TextField("Ask anything...", text: $viewModel.inputText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Button(action: {
-                        viewModel.sendMessage()
-                    }) {
-                        Image(systemName: "paperplane.fill")
-                            .foregroundColor(.blue)
-                    }
-                }
-                .padding()
             }
-            .navigationTitle("Chat")
+            .navigationTitle("Agent Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .onAppear {
                 viewModel.loadMessages()
             }
@@ -78,10 +99,12 @@ struct MessageBubble: View {
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 8) {
                 if let text = message.text {
                     Text(text)
-                        .padding(10)
-                        .background(message.isUser ? Color.blue : Color(UIColor.secondarySystemBackground))
+                        .padding(14)
+                        .background(message.isUser ? AnyView(Color.blue.opacity(0.8)) : AnyView(Rectangle().fill(.ultraThinMaterial)))
                         .foregroundColor(message.isUser ? .white : .primary)
-                        .cornerRadius(12)
+                        .cornerRadius(18)
+                        // Add slight shadow for depth
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                 }
                 
                 if let task = message.associatedTask {
@@ -98,10 +121,11 @@ struct TaskCard: View {
     let task: AgentTask
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: icon(for: task.status))
                     .foregroundColor(color(for: task.status))
+                    .font(.title3)
                 Text(task.title)
                     .font(.headline)
             }
@@ -109,27 +133,36 @@ struct TaskCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text(task.status.rawValue)
-                .font(.caption)
-                .padding(4)
-                .background(color(for: task.status).opacity(0.2))
-                .foregroundColor(color(for: task.status))
-                .cornerRadius(4)
+            HStack {
+                Text(task.status.rawValue)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(color(for: task.status).opacity(0.2))
+                    .foregroundColor(color(for: task.status))
+                    .cornerRadius(8)
+                Spacer()
+                if task.status == .running {
+                    ProgressView()
+                }
+            }
         }
-        .padding()
-        .background(Color(UIColor.tertiarySystemBackground))
-        .cornerRadius(12)
+        .padding(16)
+        .background(.ultraThinMaterial)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        // Add a subtle border to enhance the glass effect
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
     }
     
     private func icon(for status: TaskStatus) -> String {
         switch status {
-        case .running: return "arrow.triangle.2.circlepath"
-        case .needsApproval: return "exclamationmark.circle.fill"
-        case .completed: return "checkmark.circle.fill"
+        case .running: return "gearshape.2.fill"
+        case .needsApproval: return "exclamationmark.shield.fill"
+        case .completed: return "checkmark.seal.fill"
         }
     }
     
