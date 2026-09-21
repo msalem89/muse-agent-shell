@@ -55,6 +55,44 @@ class BackendService {
         try await Task.sleep(nanoseconds: 1_000_000_000)
     }
     
+    func sendMessage(text: String, sshCommandTemplate: String = "python nafs/run_qarin.py") async throws -> String {
+        switch activeConnectionType {
+        case .ssh:
+            guard let sshClient = self.sshClient else {
+                throw URLError(.notConnectedToInternet)
+            }
+            // Execute the command remotely. We format the command with the prompt.
+            // Example: `python nafs/run_qarin.py "my message"`
+            let escapedText = text.replacingOccurrences(of: "\"", with: "\\\"")
+            let fullCommand = "\(sshCommandTemplate) \"\(escapedText)\""
+            
+            // Note: Exact Citadel syntax for executing commands
+            let responseBuffer = try await sshClient.executeCommand(fullCommand)
+            var buffer = responseBuffer
+            let responseString = buffer.readString(length: buffer.readableBytes) ?? ""
+            return responseString.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+        case .https:
+            // HTTPS POST request to local Agent Orchestrator
+            guard let endpoint = URL(string: "http://localhost:8000/chat") else { throw URLError(.badURL) }
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body = ["prompt": text]
+            request.httpBody = try? JSONEncoder().encode(body)
+            
+            let (data, _) = try await URLSession.shared.data(for: request)
+            if let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                return decoded["response"] ?? "Success"
+            }
+            return String(data: data, encoding: .utf8) ?? "Success"
+            
+        case .hosted:
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+            return "This is a response from the Hosted cloud agent."
+        }
+    }
+    
     func fetchChatHistory() async -> [ChatMessage] {
         return [
             ChatMessage(isUser: true, text: "Book a flight to New York.", associatedTask: nil),

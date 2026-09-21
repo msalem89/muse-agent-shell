@@ -14,15 +14,20 @@ class ChatViewModel: ObservableObject {
     
     func sendMessage() {
         guard !inputText.isEmpty else { return }
-        let newMessage = ChatMessage(isUser: true, text: inputText, associatedTask: nil)
+        let userMessage = inputText
+        let newMessage = ChatMessage(isUser: true, text: userMessage, associatedTask: nil)
         messages.append(newMessage)
         inputText = ""
         
-        // Mock response
         Task {
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            let reply = ChatMessage(isUser: false, text: "I can help with that.", associatedTask: nil)
-            messages.append(reply)
+            do {
+                let responseText = try await BackendService.shared.sendMessage(text: userMessage)
+                let reply = ChatMessage(isUser: false, text: responseText, associatedTask: nil)
+                messages.append(reply)
+            } catch {
+                let errorReply = ChatMessage(isUser: false, text: "Error: \(error.localizedDescription)", associatedTask: nil)
+                messages.append(errorReply)
+            }
         }
     }
 }
